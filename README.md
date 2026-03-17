@@ -127,9 +127,9 @@ flutter run
 
 <p align="center">
   <img src="assets/screenshot/Home.jpeg" width="250"/>
-  <img src="assets/screenshot/Pos1.jpg" width="250"/>
-  <img src="assets/screenshot/Pos2.jpg" width="250"/>
-    <img src="assets/screenshot/Tentang.jpg" width="250"/>
+  <img src="assets/screenshot/Pos1.jpeg" width="250"/>
+  <img src="assets/screenshot/Pos2.jpeg" width="250"/>
+    <img src="assets/screenshot/Tentang.jpeg" width="250"/>
 
 </p>
 
