@@ -126,20 +126,14 @@ flutter run
 ## 📸 Screenshot
 
 <p align="center">
-  <img src="assets/screenshot/home.jpg" width="250"/>
-  <img src="assets/screenshot/lesson.jpg" width="250"/>
-  <img src="assets/screenshot/dragdrop.jpg" width="250"/>
+  <img src="assets/screenshot/Home.jpeg" width="250"/>
+  <img src="assets/screenshot/Pos1.jpg" width="250"/>
+  <img src="assets/screenshot/Pos2.jpg" width="250"/>
+    <img src="assets/screenshot/Tentang.jpg" width="250"/>
+
 </p>
 
-<p align="center">
-  <img src="assets/screenshot/matching.jpg" width="250"/>
-  <img src="assets/screenshot/decision.jpg" width="250"/>
-  <img src="assets/screenshot/quiz.jpg" width="250"/>
-</p>
 
-<p align="center">
-  <img src="assets/screenshot/result.jpg" width="250"/>
-</p>
 
 ## 🎓 Output
 
