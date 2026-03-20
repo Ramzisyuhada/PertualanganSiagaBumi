@@ -12,7 +12,7 @@ class AboutScreen extends StatelessWidget {
       body: Column(
         children: [
 
-          /// 🌈 HERO HEADER
+          /// 🌈 HEADER
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
@@ -22,8 +22,6 @@ class AboutScreen extends StatelessWidget {
                   Color(0xFF4CAF50),
                   Color(0xFF81C784),
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.vertical(
                 bottom: Radius.circular(30),
@@ -32,7 +30,7 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               children: [
 
-                /// BACK BUTTON
+                /// BACK
                 Align(
                   alignment: Alignment.topLeft,
                   child: IconButton(
@@ -43,16 +41,26 @@ class AboutScreen extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                /// ICON
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.public, size: 40, color: Colors.green),
-                ).animate().scale(duration: 400.ms),
+                /// LOGO
+                ClipOval(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset("assets/game/Logo.png"),
+                      ),
+                    ),
+                  ),
+                )
+                    .animate()
+                    .scale(duration: 500.ms, curve: Curves.elasticOut)
+                    .fadeIn(),
 
                 const SizedBox(height: 10),
 
-                /// TITLE
                 const Text(
                   "Petualang Siaga Bumi",
                   style: TextStyle(
@@ -69,10 +77,9 @@ class AboutScreen extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                /// VERSION
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -130,7 +137,6 @@ class AboutScreen extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                /// FOOTER
                 Center(
                   child: Text(
                     "© 2025 Edukasi Bencana Indonesia",
@@ -145,7 +151,6 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  /// 🔥 FEATURE CARD MODERN
   Widget _featureCard({
     required IconData icon,
     required String title,
@@ -171,7 +176,6 @@ class AboutScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          /// ICON
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -183,7 +187,6 @@ class AboutScreen extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          /// TEXT
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

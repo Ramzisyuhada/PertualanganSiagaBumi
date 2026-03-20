@@ -68,11 +68,15 @@ class GameNotifier extends StateNotifier<GameState> {
   /// =========================
   /// 🔓 UNLOCK NEXT LEVEL
   /// =========================
-  void unlockNextLevel() {
+void unlockNextLevel() {
+  if (state.level < 5) { // 🔥 batas max level (POS 5)
     state = state.copyWith(
       level: state.level + 1,
     );
+
+    print("LEVEL NAIK: ${state.level}");
   }
+}
 
   /// =========================
   /// 📚 OPEN LESSON CARD

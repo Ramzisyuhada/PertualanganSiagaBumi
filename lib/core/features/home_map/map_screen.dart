@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:petualangansiagabumi/core/features/lesson/about_screen.dart';
 
+import 'package:petualangansiagabumi/core/features/lesson/about_screen.dart';
 import 'package:petualangansiagabumi/core/features/lesson/decision_screen.dart';
 import 'package:petualangansiagabumi/core/presentation/widgets/level_bubble.dart';
 import 'package:petualangansiagabumi/core/presentation/widgets/map_path_painter.dart';
@@ -41,8 +41,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     with SingleTickerProviderStateMixin {
 
   late AnimationController controller;
-
   final AudioPlayer clickPlayer = AudioPlayer();
+
+  bool isNavigating = false;
 
   @override
   void initState() {
@@ -52,6 +53,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
+    /// 🔥 PRELOAD AUDIO (ANTI LAG)
+    clickPlayer.setAsset('assets/sounds/click.mp3');
   }
 
   @override
@@ -61,15 +65,37 @@ class _MapScreenState extends ConsumerState<MapScreen>
     super.dispose();
   }
 
-  /// 🔊 CLICK SOUND
+  /// 🔊 AUDIO SMOOTH
   Future<void> playClick() async {
     try {
-      await clickPlayer.stop();
-      await clickPlayer.setAsset('assets/sounds/click.mp3');
-      await clickPlayer.play();
-    } catch (e) {
-      debugPrint("CLICK ERROR: $e");
-    }
+      clickPlayer.stop();
+      await clickPlayer.seek(Duration.zero);
+      clickPlayer.play();
+    } catch (_) {}
+  }
+
+  /// 🎬 NAVIGATION ANIMATION
+  void goToScreen(Widget screen) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 400),
+        pageBuilder: (_, __, ___) => screen,
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.9, end: 1.0)
+                  .animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              )),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   /// 📍 POSITION
@@ -91,7 +117,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
       LevelModel(title: "POS 2", screen: const DragDropScreen()),
       LevelModel(title: "POS 3", screen: const MatchingScreen()),
       LevelModel(title: "POS 4", screen: const DecisionScreen()),
-      LevelModel(title: "POS 5", screen:  QuizScreen()), // 🔥
+      LevelModel(title: "POS 5", screen: QuizScreen()),
     ];
 
     final avatarPos = getPosition(
@@ -104,7 +130,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           children: [
 
-            /// 🔝 HEADER
+            /// HEADER
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -113,23 +139,23 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   _badge("❤️ ${game.hearts}", Colors.red),
                   _badge("⭐ ${game.xp}", Colors.orange),
                   _badge("🏆 Lv ${game.level}", Colors.green),
-                    IconButton(
-      icon: const Icon(Icons.info_outline),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const AboutScreen(),
-          ),
-        );
-      },
-    ),
- 
+
+                  IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AboutScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
 
-            /// 🌍 MAP
+            /// MAP
             Expanded(
               child: AnimatedBuilder(
                 animation: controller,
@@ -137,10 +163,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   return Stack(
                     children: [
 
-                      /// 🌈 BACKGROUND
                       const MapBackground(),
 
-                      /// 🎯 PATH
                       Positioned.fill(
                         child: CustomPaint(
                           painter: MapPathPainter(
@@ -150,13 +174,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         ),
                       ),
 
-                      /// 🔘 LEVEL
+                      /// LEVEL LIST
                       ListView.builder(
                         itemCount: levels.length,
                         itemBuilder: (context, index) {
                           final isLeft = index % 2 == 0;
                           final unlocked = index < game.level;
-
                           return Padding(
                             padding: EdgeInsets.only(
                               top: index == 0 ? 20 : 60,
@@ -171,19 +194,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
                                 title: levels[index].title,
                                 unlocked: unlocked,
                                 onTap: () async {
-                                  if (!unlocked) return;
+                                  if (!unlocked || isNavigating) return;
+
+                                  isNavigating = true;
 
                                   await playClick();
 
                                   await Future.delayed(
                                       const Duration(milliseconds: 120));
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => levels[index].screen,
-                                    ),
-                                  );
+                                  goToScreen(levels[index].screen);
+
+                                  isNavigating = false;
                                 },
                               ),
                             ),
@@ -191,7 +213,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         },
                       ),
 
-                      /// 👤 AVATAR
+                      /// AVATAR
                       _Avatar(position: avatarPos),
                     ],
                   );
@@ -264,6 +286,8 @@ class _MapBackgroundState extends State<MapBackground> {
 
     Future.doWhile(() async {
       await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return false;
+
       setState(() {
         cloudOffset += 1;
       });

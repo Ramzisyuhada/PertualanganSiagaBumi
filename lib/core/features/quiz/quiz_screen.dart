@@ -8,7 +8,6 @@ import 'package:petualangansiagabumi/core/presentation/widgets/xp_popup.dart';
 import 'package:petualangansiagabumi/core/presentation/widgets/confetti_widget.dart';
 
 import '../result/game_over_screen.dart';
-import '../home_map/map_screen.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
   const QuizScreen({super.key});
@@ -21,6 +20,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   int currentIndex = 0;
   int? selectedIndex;
   bool answered = false;
+  bool isLocked = false;
 
   int correctCount = 0;
 
@@ -29,8 +29,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   final AudioPlayer player = AudioPlayer();
 
-  /// ✅ STRONG TYPE
-  List<Map<String, Object>> questions = [
+  List<Map<String, dynamic>> questions = [
     {
       "question": "Apa yang harus dilakukan saat gempa?",
       "options": [
@@ -67,6 +66,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   void initState() {
     super.initState();
     questions.shuffle(Random());
+    _preloadAudio();
+  }
+
+  Future<void> _preloadAudio() async {
+    try {
+      await player.setAsset('assets/sounds/click.mp3');
+    } catch (_) {}
   }
 
   @override
@@ -75,20 +81,24 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     super.dispose();
   }
 
-  /// 🔊 AUDIO
   Future<void> playSound(String file) async {
     try {
       await player.stop();
       await player.setAsset('assets/sounds/$file');
+      await player.seek(Duration.zero);
       await player.play();
     } catch (e) {
       debugPrint("AUDIO ERROR: $e");
     }
   }
 
-  /// 🎯 SELECT ANSWER
+  double get scorePercent {
+    return (correctCount / questions.length) * 100;
+  }
+
   void selectAnswer(int index) async {
-    if (answered) return;
+    if (answered || isLocked) return;
+    isLocked = true;
 
     await playSound("click.mp3");
 
@@ -97,15 +107,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       answered = true;
     });
 
-    final question = questions[currentIndex];
-    final correctIndex = question["answer"] as int;
-
+    final correctIndex = questions[currentIndex]["answer"];
     final isCorrect = index == correctIndex;
 
     if (isCorrect) {
       correctCount++;
-
       await playSound("correct.mp3");
+
       ref.read(gameProvider.notifier).correctAnswer();
 
       setState(() {
@@ -114,6 +122,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       });
     } else {
       await playSound("wrong.mp3");
+
       ref.read(gameProvider.notifier).wrongAnswer();
 
       final game = ref.read(gameProvider);
@@ -126,11 +135,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       }
     }
 
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => showXp = false);
     });
 
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 900), () {
       if (currentIndex < questions.length - 1) {
         setState(() {
           currentIndex++;
@@ -140,21 +149,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       } else {
         finishQuiz();
       }
+      isLocked = false;
     });
   }
 
-  /// 🎯 FINISH QUIZ
   void finishQuiz() async {
-    final score = (correctCount / questions.length) * 100;
+    final score = scorePercent;
 
     if (score >= 75) {
       await playSound("correct.mp3");
-
-      /// 🔓 UNLOCK LEVEL
       ref.read(gameProvider.notifier).unlockNextLevel();
 
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (_) => _successDialog(score),
       );
     } else {
@@ -162,12 +170,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (_) => _retryDialog(score),
       );
     }
   }
 
-  /// 🏆 SUCCESS
   Widget _successDialog(double score) {
     return AlertDialog(
       shape: RoundedRectangleBorder(
@@ -179,39 +187,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           const Text("🎉 LULUS!", style: TextStyle(fontSize: 22)),
           const SizedBox(height: 10),
           Text("Nilai: ${score.toStringAsFixed(0)}%"),
+          Text("Benar: $correctCount / ${questions.length}"),
           const SizedBox(height: 20),
-
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.yellow.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              "🏆 Sertifikat Digital\nSiswa Tangguh Bencana",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
           ElevatedButton(
             onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const MapScreen()),
-                (route) => false,
-              );
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
-            child: const Text("Kembali ke Map"),
+            child: const Text("Kembali"),
           )
         ],
       ),
     );
   }
 
-  /// 🔁 RETRY
   Widget _retryDialog(double score) {
     return AlertDialog(
       shape: RoundedRectangleBorder(
@@ -221,14 +210,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text("❌ Belum Lulus"),
-          const SizedBox(height: 10),
           Text("Nilai: ${score.toStringAsFixed(0)}%"),
-          const Text("Minimal 75%"),
+          Text("Benar: $correctCount / ${questions.length}"),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-
               setState(() {
                 currentIndex = 0;
                 selectedIndex = null;
@@ -249,24 +236,18 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final game = ref.watch(gameProvider);
 
     final question = questions[currentIndex];
-    final options = question["options"] as List<String>;
-    final correctIndex = question["answer"] as int;
-
     final progress = (currentIndex + 1) / questions.length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
-      appBar: AppBar(
-        title: const Text("POS 5 - Quiz"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Quiz")),
 
       body: Stack(
         children: [
           Column(
             children: [
 
-              /// HEADER
+              /// 🔥 HEADER GAME
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -278,57 +259,77 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                         Text("⭐ ${game.xp} XP"),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
+
                     LinearProgressIndicator(value: progress),
+                    const SizedBox(height: 6),
+
+                    Text(
+                      "Soal ${currentIndex + 1}/${questions.length} • Score ${scorePercent.toStringAsFixed(0)}%",
+                      style: const TextStyle(fontSize: 12),
+                    )
                   ],
                 ),
               ),
 
-              /// QUESTION
+              /// 🧠 QUESTION CARD
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  question["question"] as String,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.white, Color(0xFFF1F5FF)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 10)
+                    ],
+                  ),
+                  child: Text(
+                    question["question"],
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
 
-              /// OPTIONS
+              /// 🎯 OPTIONS
               Expanded(
                 child: ListView.builder(
-                  itemCount: options.length,
+                  itemCount: question["options"].length,
                   itemBuilder: (context, i) {
+                    final correctIndex = question["answer"];
+
                     bool isSelected = selectedIndex == i;
                     bool isCorrect = i == correctIndex;
 
                     Color bg = Colors.white;
-                    Color border = Colors.grey.shade300;
 
                     if (answered) {
-                      if (isCorrect) {
-                        bg = Colors.green.shade200;
-                        border = Colors.green;
-                      } else if (isSelected) {
-                        bg = Colors.red.shade200;
-                        border = Colors.red;
-                      }
+                      if (isCorrect) bg = Colors.green.shade200;
+                      else if (isSelected) bg = Colors.red.shade200;
                     }
 
                     return GestureDetector(
                       onTap: () => selectAnswer(i),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.all(12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: bg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: border, width: 2),
+                      child: AnimatedScale(
+                        scale: isSelected ? 0.96 : 1,
+                        duration: const Duration(milliseconds: 150),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Colors.black12, blurRadius: 6)
+                            ],
+                          ),
+                          child: Text(question["options"][i]),
                         ),
-                        child: Text(options[i]),
                       ),
                     );
                   },

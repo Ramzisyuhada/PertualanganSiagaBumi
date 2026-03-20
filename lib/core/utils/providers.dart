@@ -6,7 +6,9 @@ import 'package:petualangansiagabumi/data/repositories/story_repository.dart';
 import '../../data/repositories/lesson_repository.dart';
 
 final lessonProvider = Provider((ref) => LessonRepository());
-final dragDropProvider = Provider((ref) => DragDropRepository());
+final dragDropProvider = Provider((ref) {
+  return DragDropRepository();
+});
 final matchingProvider = Provider((ref) => MatchingRepository());
 final decisionProvider = Provider((ref) => DecisionRepository());
 final storyProvider = Provider((ref) => StoryRepository());
